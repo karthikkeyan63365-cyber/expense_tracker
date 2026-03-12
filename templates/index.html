@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Expense Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0a0d12;
+      --surface: #111520;
+      --card: #161c2d;
+      --border: #1e2a42;
+      --accent: #00ff88;
+      --accent2: #00c4ff;
+      --red: #ff4d6d;
+      --muted: #4a5578;
+      --text: #e2e8f8;
+      --text2: #8899bb;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── BACKGROUND GRID ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── HEADER ── */
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .logo {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo-tag {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    h1 {
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 800;
+      line-height: 1;
+      background: linear-gradient(135deg, var(--text), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-pill {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text2);
+    }
+
+    .status-pill.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── UPLOAD ZONE ── */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      padding: 60px 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: var(--surface);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .upload-zone::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 16px;
+      opacity: 0;
+      z-index: -1;
+      transition: opacity 0.3s;
+    }
+
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .upload-zone:hover::before, .upload-zone.drag-over::before {
+      opacity: 0.1;
+    }
+
+    .upload-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      filter: grayscale(1);
+      transition: filter 0.3s;
+    }
+
+    .upload-zone:hover .upload-icon {
+      filter: none;
+    }
+
+    .upload-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .upload-sub {
+      font-size: 13px;
+      color: var(--text2);
+      font-family: 'Space Mono', monospace;
+      margin-bottom: 24px;
+    }
+
+    #fileInput { display: none; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0a0d12;
+    }
+
+    .btn-primary:hover {
+      background: #00ffaa;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(0,255,136,0.3);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text2);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    /* ── STATS ROW ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 32px 0;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      transition: border-color 0.2s;
+    }
+
+    .stat-card:hover {
+      border-color: var(--muted);
+    }
+
+    .stat-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .stat-value.blue { color: var(--accent2); }
+    .stat-value.red { color: var(--red); }
+    .stat-value.white { color: var(--text); }
+
+    /* ── DASHBOARD GRID ── */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .dashboard { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .card-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 20px;
+    }
+
+    /* ── CHART ── */
+    .chart-wrapper {
+      height: 260px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── CATEGORY BARS ── */
+    .category-bars { display: flex; flex-direction: column; gap: 12px; }
+
+    .cat-row { display: flex; flex-direction: column; gap: 6px; }
+
+    .cat-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+
+    .cat-name { font-weight: 600; }
+
+    .cat-amount {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    .bar-track {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+    }
+
+    /* ── TRANSACTIONS TABLE ── */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead {
+      background: var(--surface);
+    }
+
+    th {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text2);
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(30,42,66,0.5);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .amount-neg {
+      font-family: 'Space Mono', monospace;
+      color: var(--red);
+      font-weight: 700;
+    }
+
+    .amount-pos {
+      font-family: 'Space Mono', monospace;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* ── CATEGORY BADGE + SELECT ── */
+    .cat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .cat-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .cat-select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .cat-select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .cat-select.changed {
+      border-color: var(--accent);
+      background: rgba(0,255,136,0.06);
+    }
+
+    /* ── SAVE BAR ── */
+    .save-bar {
+      display: none;
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--card);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 12px 40px rgba(0,255,136,0.2);
+      z-index: 100;
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+      to { transform: translateX(-50%) translateY(0); opacity: 1; }
+    }
+
+    .save-bar.hidden { display: none !important; }
+
+    .save-text {
+      font-size: 13px;
+      color: var(--text2);
+    }
+
+    .save-count {
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    /* ── LEARNED RULES PANEL ── */
+    .rules-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 24px;
+    }
+
+    .rules-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .rule-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-family: 'Space Mono', monospace;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .rule-arrow {
+      color: var(--accent);
+      font-size: 10px;
+    }
+
+    /* ── LOADING ── */
+    .loader {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 60px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loader-text {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--text2);
+      letter-spacing: 2px;
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: var(--card);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-family: 'Space Mono', monospace;
+      z-index: 200;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: all 0.3s;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── EMPTY STATE ── */
+    #mainContent { display: none; }
+
+    /* ── FILTER ROW ── */
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .filter-select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .filter-select:focus { outline: none; border-color: var(--accent2); }
+
+    .search-input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      flex: 1;
+      min-width: 160px;
+    }
+
+    .search-input:focus { outline: none; border-color: var(--accent2); }
+    .search-input::placeholder { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <span class="logo-tag">₹ Smart Finance</span>
+      <h1>Expense Tracker</h1>
+    </div>
+    <div id="statusPill" class="status-pill">No data loaded</div>
+  </header>
+
+  <!-- UPLOAD SECTION -->
+  <div id="uploadSection">
+    <div class="upload-zone" id="dropZone">
+      <div class="upload-icon">📂</div>
+      <div class="upload-title">Drop your bank statement here</div>
+      <div class="upload-sub">CSV or Excel (.csv, .xlsx, .xls) · Any bank format</div>
+      <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+        Choose File
+      </button>
+      <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" />
+    </div>
+
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <div class="loader-text">Analyzing transactions...</div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT (shown after upload) -->
+  <div id="mainContent">
+
+    <!-- STATS -->
+    <div class="stats-row" id="statsRow"></div>
+
+    <!-- DASHBOARD: PIE + BARS -->
+    <div class="dashboard">
+      <div class="card">
+        <div class="card-title">Spending by Category</div>
+        <div class="chart-wrapper">
+          <canvas id="pieChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Category Breakdown</div>
+        <div class="category-bars" id="categoryBars"></div>
+      </div>
+    </div>
+
+    <!-- TRANSACTIONS TABLE -->
+    <div class="card" style="padding:0; overflow:hidden; margin-bottom:24px;">
+      <div style="padding:20px 24px 12px;">
+        <div class="card-title" style="margin-bottom:12px;">All Transactions</div>
+        <div class="filter-row">
+          <input class="search-input" id="searchInput" placeholder="Search description..." oninput="filterTable()" />
+          <select class="filter-select" id="filterCategory" onchange="filterTable()">
+            <option value="">All Categories</option>
+          </select>
+          <select class="filter-select" id="filterType" onchange="filterTable()">
+            <option value="">All Types</option>
+            <option value="debit">Spending only</option>
+            <option value="credit">Income only</option>
+          </select>
+          <button class="btn btn-ghost" onclick="resetUpload()" style="margin-left:auto;">↩ New File</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Merchant</th>
+              <th>Amount</th>
+              <th>Category</th>
+            </tr>
+          </thead>
+          <tbody id="transactionBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- LEARNED RULES -->
+    <div class="rules-panel">
+      <div class="card-title">🧠 Learned Rules</div>
+      <div style="font-size:13px; color:var(--text2); margin-bottom:4px;">
+        When you change a category, the system remembers it for future uploads.
+      </div>
+      <div class="rules-grid" id="rulesGrid">
+        <span style="font-size:12px; color:var(--muted); font-family:'Space Mono',monospace;">No custom rules yet</span>
+      </div>
+    </div>
+
+  </div><!-- end mainContent -->
+
+</div><!-- end container -->
+
+<!-- SAVE BAR -->
+<div class="save-bar hidden" id="saveBar">
+  <span class="save-text">You changed <span class="save-count" id="changeCount">0</span> categories</span>
+  <button class="btn btn-primary" onclick="saveChanges()">Save &amp; Learn</button>
+  <button class="btn btn-ghost" onclick="dismissSaveBar()">Dismiss</button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ──────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────
+let allTransactions = [];
+let allCategories = [];
+let pendingChanges = {}; // merchant → newCategory
+let pieChart = null;
+
+const CAT_COLORS = [
+  "#00ff88","#00c4ff","#ff4d6d","#ffd166","#a78bfa",
+  "#f97316","#22d3ee","#fb7185","#86efac","#c084fc",
+  "#f472b6","#34d399","#60a5fa","#fbbf24","#a3e635"
+];
+
+// ──────────────────────────────────────────
+// DRAG & DROP
+// ──────────────────────────────────────────
+const dropZone = document.getElementById("dropZone");
+dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+dropZone.addEventListener("drop", e => {
+  e.preventDefault();
+  dropZone.classList.remove("drag-over");
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+document.getElementById("fileInput").addEventListener("change", e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+// ──────────────────────────────────────────
+// UPLOAD & PARSE
+// ──────────────────────────────────────────
+async function handleFile(file) {
+  document.getElementById("loader").style.display = "flex";
+  dropZone.style.display = "none";
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const res = await fetch("/upload", { method: "POST", body: formData });
+    const data = await res.json();
+
+    if (data.error) {
+      showToast("❌ " + data.error, true);
+      resetUpload();
+      return;
+    }
+
+    allTransactions = data.transactions;
+    renderDashboard(data);
+    loadLearnedRules();
+    loadCategories();
+
+  } catch (err) {
+    showToast("❌ Upload failed: " + err.message, true);
+    resetUpload();
+  }
+}
+
+// ──────────────────────────────────────────
+// RENDER DASHBOARD
+// ──────────────────────────────────────────
+function renderDashboard(data) {
+  document.getElementById("loader").style.display = "none";
+  document.getElementById("uploadSection").style.display = "none";
+  document.getElementById("mainContent").style.display = "block";
+
+  const pill = document.getElementById("statusPill");
+  pill.textContent = data.total_transactions + " transactions loaded";
+  pill.classList.add("active");
+
+  // ── Stats ──
+  const spending = allTransactions.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const income = allTransactions.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  const uncategorized = allTransactions.filter(t => t.category === "Uncategorized").length;
+
+  document.getElementById("statsRow").innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Total Transactions</div>
+      <div class="stat-value white">${data.total_transactions}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Spending</div>
+      <div class="stat-value red">₹${fmt(spending)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Income</div>
+      <div class="stat-value">₹${fmt(income)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Uncategorized</div>
+      <div class="stat-value blue">${uncategorized}</div>
+    </div>
+  `;
+
+  // ── Chart & Bars ──
+  renderChart(data.summary);
+  renderBars(data.summary);
+
+  // ── Table ──
+  renderTable(allTransactions);
+}
+
+function fmt(n) {
+  return Number(n).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+// ──────────────────────────────────────────
+// PIE CHART
+// ──────────────────────────────────────────
+function renderChart(summary) {
+  const labels = Object.keys(summary);
+  const values = Object.values(summary);
+
+  if (pieChart) pieChart.destroy();
+
+  const ctx = document.getElementById("pieChart").getContext("2d");
+  pieChart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: labels.map((_, i) => CAT_COLORS[i % CAT_COLORS.length]),
+        borderColor: "#161c2d",
+        borderWidth: 3,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      cutout: "65%",
+      plugins: {
+        legend: {
+          position: "right",
+          labels: {
+            color: "#8899bb",
+            font: { family: "Space Mono", size: 10 },
+            boxWidth: 10,
+            padding: 12,
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` ₹${fmt(ctx.raw)}`
+          }
+        }
+      }
+    }
+  });
+}
+
+// ──────────────────────────────────────────
+// CATEGORY BARS
+// ──────────────────────────────────────────
+function renderBars(summary) {
+  const max = Math.max(...Object.values(summary));
+  const sorted = Object.entries(summary).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const container = document.getElementById("categoryBars");
+
+  container.innerHTML = sorted.map(([cat, amt], i) => `
+    <div class="cat-row">
+      <div class="cat-meta">
+        <span class="cat-name">${cat}</span>
+        <span class="cat-amount">₹${fmt(amt)}</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:0%; background: ${CAT_COLORS[i % CAT_COLORS.length]}" 
+             data-width="${(amt/max*100).toFixed(1)}"></div>
+      </div>
+    </div>
+  `).join("");
+
+  // Animate bars
+  setTimeout(() => {
+    document.querySelectorAll(".bar-fill").forEach(el => {
+      el.style.width = el.dataset.width + "%";
+    });
+  }, 50);
+}
+
+// ──────────────────────────────────────────
+// TRANSACTIONS TABLE
+// ──────────────────────────────────────────
+function renderTable(transactions) {
+  const tbody = document.getElementById("transactionBody");
+
+  tbody.innerHTML = transactions.map((t, idx) => {
+    const isNeg = t.amount < 0;
+    const amtClass = isNeg ? "amount-neg" : "amount-pos";
+    const amtStr = (isNeg ? "−₹" : "+₹") + fmt(Math.abs(t.amount));
+
+    return `
+    <tr>
+      <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text2)">${t.date}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${t.description}">${t.description}</td>
+      <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--accent2)">${t.merchant}</td>
+      <td class="${amtClass}">${amtStr}</td>
+      <td>
+        <select class="cat-select" data-idx="${idx}" data-merchant="${t.merchant}" onchange="onCategoryChange(this)">
+        </select>
+      </td>
+    </tr>`;
+  }).join("");
+
+  // Populate selects with categories and mark current
+  document.querySelectorAll(".cat-select").forEach(select => {
+    const idx = parseInt(select.dataset.idx);
+    const currentCat = allTransactions[idx].category;
+
+    allCategories.forEach(cat => {
+      const opt = document.createElement("option");
+      opt.value = cat;
+      opt.textContent = cat;
+      if (cat === currentCat) opt.selected = true;
+      select.appendChild(opt);
+    });
+  });
+
+  // Update filter dropdown
+  const filterCat = document.getElementById("filterCategory");
+  filterCat.innerHTML = '<option value="">All Categories</option>';
+  allCategories.forEach(cat => {
+    const opt = document.createElement("option");
+    opt.value = cat;
+    opt.textContent = cat;
+    filterCat.appendChild(opt);
+  });
+}
+
+// ──────────────────────────────────────────
+// FILTER
+// ──────────────────────────────────────────
+function filterTable() {
+  const search = document.getElementById("searchInput").value.toLowerCase();
+  const catFilter = document.getElementById("filterCategory").value;
+  const typeFilter = document.getElementById("filterType").value;
+
+  const filtered = allTransactions.filter(t => {
+    const matchSearch = !search || t.description.toLowerCase().includes(search) || t.merchant.toLowerCase().includes(search);
+    const matchCat = !catFilter || t.category === catFilter;
+    const matchType = !typeFilter ||
+      (typeFilter === "debit" && t.amount < 0) ||
+      (typeFilter === "credit" && t.amount > 0);
+    return matchSearch && matchCat && matchType;
+  });
+
+  renderTable(filtered);
+}
+
+// ──────────────────────────────────────────
+// CATEGORY CHANGE
+// ──────────────────────────────────────────
+function onCategoryChange(select) {
+  const merchant = select.dataset.merchant;
+  const newCat = select.value;
+  const idx = parseInt(select.dataset.idx);
+
+  // Update in-memory
+  allTransactions[idx].category = newCat;
+
+  // Mark pending
+  pendingChanges[merchant] = newCat;
+  select.classList.add("changed");
+
+  // Show save bar
+  const count = Object.keys(pendingChanges).length;
+  document.getElementById("changeCount").textContent = count;
+  const saveBar = document.getElementById("saveBar");
+  saveBar.classList.remove("hidden");
+  saveBar.style.display = "flex";
+}
+
+// ──────────────────────────────────────────
+// SAVE CHANGES (learn)
+// ──────────────────────────────────────────
+async function saveChanges() {
+  const entries = Object.entries(pendingChanges);
+  let saved = 0;
+
+  for (const [merchant, category] of entries) {
+    try {
+      const res = await fetch("/learn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ merchant, category })
+      });
+      if (res.ok) saved++;
+    } catch (e) {}
+  }
+
+  pendingChanges = {};
+  dismissSaveBar();
+  showToast(`✓ Learned ${saved} new rule${saved !== 1 ? "s" : ""}!`);
+  loadLearnedRules();
+
+  // Rebuild summary and refresh charts
+  rebuildSummary();
+}
+
+function rebuildSummary() {
+  const summary = {};
+  allTransactions.forEach(t => {
+    if (t.amount < 0) {
+      summary[t.category] = (summary[t.category] || 0) + Math.abs(t.amount);
+    }
+  });
+
+  Object.keys(summary).forEach(k => summary[k] = Math.round(summary[k] * 100) / 100);
+  renderChart(summary);
+  renderBars(summary);
+}
+
+function dismissSaveBar() {
+  const saveBar = document.getElementById("saveBar");
+  saveBar.classList.add("hidden");
+  saveBar.style.display = "none";
+}
+
+// ──────────────────────────────────────────
+// LEARNED RULES DISPLAY
+// ──────────────────────────────────────────
+async function loadLearnedRules() {
+  try {
+    const res = await fetch("/learned-rules");
+    const rules = await res.json();
+    const grid = document.getElementById("rulesGrid");
+    const entries = Object.entries(rules);
+
+    if (entries.length === 0) {
+      grid.innerHTML = '<span style="font-size:12px; color:var(--muted); font-family:\'Space Mono\',monospace;">No custom rules yet</span>';
+      return;
+    }
+
+    grid.innerHTML = entries.map(([merchant, cat]) => `
+      <div class="rule-chip">
+        <span style="color:var(--text2)">${merchant}</span>
+        <span class="rule-arrow">→</span>
+        <span style="color:var(--accent)">${cat}</span>
+      </div>
+    `).join("");
+  } catch (e) {}
+}
+
+async function loadCategories() {
+  try {
+    const res = await fetch("/categories");
+    allCategories = await res.json();
+    renderTable(allTransactions);
+  } catch (e) {}
+}
+
+// ──────────────────────────────────────────
+// HELPERS
+// ──────────────────────────────────────────
+function resetUpload() {
+  document.getElementById("uploadSection").style.display = "block";
+  document.getElementById("mainContent").style.display = "none";
+  dropZone.style.display = "flex";
+  document.getElementById("loader").style.display = "none";
+  document.getElementById("statusPill").textContent = "No data loaded";
+  document.getElementById("statusPill").classList.remove("active");
+  document.getElementById("fileInput").value = "";
+  allTransactions = [];
+  pendingChanges = {};
+}
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.borderColor = isError ? "var(--red)" : "var(--accent)";
+  t.style.color = isError ? "var(--red)" : "var(--accent)";
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 3000);
+}
+
+// Load rules on page load
+loadLearnedRules();
+</script>
+</body>
+</html>
